@@ -125,10 +125,15 @@ pub struct Close<'info> {
     #[account(
         mut,
         seeds = [b"state",signer.key().as_ref()],
-        bump = vault_state.vault_bump,
+        bump = vault_state.state_bump,
         close = signer
     )]
     pub vault_state: Account<'info, VaultState>,
+    #[account(
+        mut,
+        seeds = [b"state",vault_state.key().as_ref()],
+        bump = vault_state.vault_bump
+    )]
     pub vault: SystemAccount<'info>,
 }
 
