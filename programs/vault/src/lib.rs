@@ -9,8 +9,8 @@ declare_id!("5KonJwMy2VtkEnV6FBT2vpGTuGvc3CLofbA1RxxrSVUA");
 pub mod vault {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        ctx.accounts.initialize(ctx.bumps)?;
+    pub fn initialize(ctx: Context<Initialize>, amount: u64) -> Result<()> {
+        ctx.accounts.initialize(ctx.bumps, amount)?;
         Ok(())
     }
 
@@ -47,18 +47,18 @@ pub struct Initialize<'info> {
 }
 
 impl<'info> Initialize<'info> {
-    pub fn initialize(&mut self, bumps: InitializeBumps) -> Result<()> {
+    pub fn initialize(&mut self, bumps: InitializeBumps, amount: u64) -> Result<()> {
         let rent_exempt = Rent::get()?.minimum_balance(0);
         let cpi_program = self.system_program.to_account_info();
         let cpi_accounts = Transfer {
             from: self.user.to_account_info(),
             to: self.vault.to_account_info(),
         };
-
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
         transfer(cpi_ctx, rent_exempt)?;
         self.vault_state.vault_bump = bumps.vault;
         self.vault_state.state_bump = bumps.vault_state;
+        self.vault_state.maximum_holdings = amount;
         Ok(())
     }
 }
@@ -91,6 +91,18 @@ impl<'info> Transact<'info> {
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 
         transfer(cpi_ctx, amount)?;
+
+        let balance = self.vault.get_lamports();
+        let rent_exempt = Rent::get()?.minimum_balance(0);
+        let remaining_balance = balance
+            .checked_sub(rent_exempt)
+            .ok_or(VaultError::RentExemptError)?; // unreachable case, for now let's keep it
+
+        require_gte!(
+            self.vault_state.maximum_holdings,
+            remaining_balance,
+            VaultError::MaximumLimitError
+        );
 
         Ok(())
     }
@@ -146,6 +158,7 @@ impl<'info> Close<'info> {
 #[account]
 #[derive(InitSpace)] // here this InitSpace macro doesn't consider the solana descriminator
 pub struct VaultState {
+    pub maximum_holdings: u64,
     pub state_bump: u8,
     pub vault_bump: u8,
 }
@@ -154,4 +167,6 @@ pub struct VaultState {
 pub enum VaultError {
     #[msg("Balance unable to cover the Rent")]
     RentExemptError,
+    #[msg("Deposits reached maximum limit")]
+    MaximumLimitError,
 }
