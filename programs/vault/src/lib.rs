@@ -5,6 +5,10 @@ use anchor_lang::{
 
 declare_id!("5KonJwMy2VtkEnV6FBT2vpGTuGvc3CLofbA1RxxrSVUA");
 
+pub mod spl_ops;
+
+use spl_ops::*;
+
 #[program]
 pub mod vault {
     use super::*;
@@ -21,6 +25,15 @@ pub mod vault {
 
     pub fn withdraw(ctx: Context<Transact>, amount: u64) -> Result<()> {
         ctx.accounts.withdraw(amount)?;
+        Ok(())
+    }
+
+    pub fn lock_spl(ctx: Context<Operate>, deposit_amount: u64) -> Result<()> {
+        ctx.accounts.lock(deposit_amount)?;
+        Ok(())
+    }
+    pub fn unlock_spl(ctx: Context<Operate>, withdraw_amount: u64) -> Result<()> {
+        ctx.accounts.unlock(withdraw_amount)?;
         Ok(())
     }
 }

@@ -1,8 +1,20 @@
 import * as anchor from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
 import { Program } from "@coral-xyz/anchor";
 import { Vault } from "../target/types/vault";
 import { assert } from "chai";
+
+import { Keypair, PublicKey, Connection, Commitment } from "@solana/web3.js";
+import { getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
+import wallet from "../../Turbin3-wallet.json";
+
+// Import our keypair from the wallet file
+const keypair = Keypair.fromSecretKey(new Uint8Array(wallet));
+
+//Create a Solana devnet connection
+const commitment: Commitment = "confirmed";
+const connection = new Connection("https://api.devnet.solana.com", commitment);
+// Mint address
+const mint = new PublicKey("CBNf8NcUxMupnPoVnphAqgEeWoL1wZG5KmFzUrNvSgcW");
 
 describe("vault", () => {
   // Configure the client to use the local cluster.
@@ -110,4 +122,42 @@ describe("vault", () => {
     );
     await program.provider.connection.confirmTransaction(tx);
   };
+});
+
+describe("vault - SPL Operations!", () => {
+  // Configure the client to use the local cluster.
+  anchor.setProvider(anchor.AnchorProvider.env());
+
+  const program = anchor.workspace.vault as Program<Vault>;
+  let vaultPDA: anchor.web3.PublicKey;
+  let vaultStatePDA: anchor.web3.PublicKey;
+  let user1 = anchor.web3.Keypair.generate();
+
+  it("Create a new token mint and deploy it to devnet", async () => {
+    (async () => {
+      try {
+        // Create an ATA
+        const ata = await getOrCreateAssociatedTokenAccount(
+          connection,
+          keypair,
+          mint,
+          keypair.publicKey
+        );
+        console.log(`Your data is : ${ata.address.toBase58()}`);
+
+        // Mint to ATA
+        const mintTx = await mintTo(
+          connection,
+          keypair,
+          mint,
+          ata.address,
+          keypair.publicKey,
+          1000000
+        );
+        console.log(`Your mint txid: ${mintTx}`);
+      } catch (error) {
+        console.log(`Oops, something went wrong: ${error}`);
+      }
+    })();
+  })
 });
