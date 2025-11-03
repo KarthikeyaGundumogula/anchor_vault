@@ -5,10 +5,6 @@ import { assert } from "chai";
 
 import { Keypair, PublicKey, Connection, Commitment } from "@solana/web3.js";
 import { getOrCreateAssociatedTokenAccount, mintTo } from "@solana/spl-token";
-import wallet from "../../Turbin3-wallet.json";
-
-// Import our keypair from the wallet file
-const keypair = Keypair.fromSecretKey(new Uint8Array(wallet));
 
 //Create a Solana devnet connection
 const commitment: Commitment = "confirmed";
@@ -16,6 +12,7 @@ const connection = new Connection("https://api.devnet.solana.com", commitment);
 // Mint address
 const mint = new PublicKey("CBNf8NcUxMupnPoVnphAqgEeWoL1wZG5KmFzUrNvSgcW");
 
+const keypair = anchor.web3.Keypair.generate();
 describe("vault", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
